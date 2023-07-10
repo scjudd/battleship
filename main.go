@@ -2,131 +2,156 @@ package main
 
 import (
 	"errors"
-	"fmt"
-)
-
-const (
-	boardWidth  = 10
-	boardHeight = 10
-)
-
-type gameState struct {
-	ships [2][]*ship
-	shots [2]map[position]shot
-}
-
-type position struct{ x, y int }
-
-type ship struct {
-	name     string
-	occupies []position
-	hits     []position
-}
-
-type shot int
-
-const (
-	unknown shot = iota
-	missed
-	hit
-)
-
-type player int
-
-const (
-	player1 player = iota
-	player2
-)
-
-type rotation int
-
-const (
-	horizontal rotation = iota
-	vertical
 )
 
 var (
-	PlacedOutOfBoundsError = errors.New("ship placed outside of board")
-	PlacementOverlapError  = errors.New("ship placed on top of an existing ship")
-	AlreadyPlacedError     = errors.New("a ship of the same type has already been placed")
+	ShipCarrier    = &Ship{name: "Carrier", length: 5}
+	ShipBattleship = &Ship{name: "Battleship", length: 4}
+	ShipCruiser    = &Ship{name: "Cruiser", length: 3}
+	ShipSubmarine  = &Ship{name: "Submarine", length: 3}
+	ShipDestroyer  = &Ship{name: "Destroyer", length: 2}
 )
 
-// Place a new ship on player p's grid. The given position xy represents the
-// bow of the ship, and the rotation r determines whether the ship will extend
-// down or to the right.
-func placeShip(s *gameState, p player, xy position, r rotation, name string, length int) error {
-	newShip := &ship{
-		name:     name,
-		occupies: make([]position, 0, length),
+var (
+	ErrAlreadyPlaced   = errors.New("ship has already been placed")
+	ErrAlreadyShot     = errors.New("a shot has already been fired at the given position")
+	ErrInvalidPosition = errors.New("position is out of bounds")
+	ErrOverlapping     = errors.New("ship cannot be placed on top of an existing ship")
+)
+
+const (
+	gridWidth  = 10
+	gridHeight = 10
+)
+
+type Grid [gridHeight][gridWidth]cell
+
+type cell struct {
+	placedShip *placedShip
+	shot       bool
+}
+
+type placedShip struct {
+	ship   *Ship
+	health int
+}
+
+type Ship struct {
+	name   string
+	length int
+}
+
+type Position struct{ X, Y int }
+
+func (p Position) Offset(n int, o Orientation) Position {
+	if o == Horizontal {
+		return Position{p.X + n, p.Y}
+	}
+	return Position{p.X, p.Y + n}
+}
+
+type Orientation int
+
+const (
+	Horizontal Orientation = iota
+	Vertical
+)
+
+type ShotResult int
+
+const (
+	Missed ShotResult = iota
+	Hit
+	Sunk
+)
+
+func (g *Grid) CheckPlacement(s *Ship, p Position, o Orientation) error {
+	if p.X < 0 || p.Y < 0 ||
+		o == Horizontal && p.X+s.length >= gridWidth ||
+		o == Vertical && p.Y+s.length >= gridHeight {
+		return ErrInvalidPosition
 	}
 
-	for i := 0; i < length; i++ {
-		var o position
-		switch r {
-		case horizontal:
-			o = position{xy.x + i, xy.y}
-		case vertical:
-			o = position{xy.x, xy.y + i}
+	for i := 0; i < s.length; i++ {
+		p2 := p.Offset(i, o)
+		c := g[p2.Y][p2.X]
+		if c.shot {
+			return ErrAlreadyShot
 		}
-		newShip.occupies = append(newShip.occupies, o)
-	}
-
-	for _, o := range newShip.occupies {
-		if o.x < 0 || o.x >= boardWidth || o.y < 0 || o.y >= boardHeight {
-			return PlacedOutOfBoundsError
+		if c.placedShip != nil {
+			return ErrOverlapping
 		}
 	}
 
-	for _, otherShip := range s.ships[int(p)] {
-		if newShip.name == otherShip.name {
-			return AlreadyPlacedError
-		}
-
-		if overlaps(newShip, otherShip) {
-			return PlacementOverlapError
+	for y := 0; y < gridHeight; y++ {
+		for x := 0; x < gridWidth; x++ {
+			ps := g[y][x].placedShip
+			if ps != nil && ps.ship == s {
+				return ErrAlreadyPlaced
+			}
 		}
 	}
-
-	s.ships[int(p)] = append(s.ships[int(p)], newShip)
 
 	return nil
 }
 
-func placeCarrier(s *gameState, p player, xy position, r rotation) error {
-	return placeShip(s, p, xy, r, "Carrier", 5)
+func (g *Grid) PlaceShip(s *Ship, p Position, o Orientation) error {
+	if err := g.CheckPlacement(s, p, o); err != nil {
+		return err
+	}
+
+	ps := &placedShip{
+		ship:   s,
+		health: s.length,
+	}
+
+	for i := 0; i < s.length; i++ {
+		p2 := p.Offset(i, o)
+		g[p2.Y][p2.X].placedShip = ps
+	}
+
+	return nil
 }
 
-func placeBattleship(s *gameState, p player, xy position, r rotation) error {
-	return placeShip(s, p, xy, r, "Battleship", 4)
+func (g *Grid) Fire(p Position) (ShotResult, error) {
+	c := &g[p.Y][p.X]
+
+	var err error
+	if c.shot {
+		err = ErrAlreadyShot
+	}
+
+	c.shot = true
+
+	if c.placedShip == nil {
+		return Missed, err
+	}
+
+	if err == nil && c.placedShip.health > 0 {
+		c.placedShip.health -= 1
+	}
+
+	if c.placedShip.health == 0 {
+		return Sunk, err
+	}
+
+	return Hit, err
 }
 
-func placeCruiser(s *gameState, p player, xy position, r rotation) error {
-	return placeShip(s, p, xy, r, "Cruiser", 3)
-}
-
-func placeSubmarine(s *gameState, p player, xy position, r rotation) error {
-	return placeShip(s, p, xy, r, "Submarine", 3)
-}
-
-func placeDestroyer(s *gameState, p player, xy position, r rotation) error {
-	return placeShip(s, p, xy, r, "Destroyer", 2)
-}
-
-func overlaps(s1, s2 *ship) bool {
-	for _, o1 := range s1.occupies {
-		for _, o2 := range s2.occupies {
-			if o1 == o2 {
-				return true
+func (g *Grid) Defeated() bool {
+	for y := 0; y < gridHeight; y++ {
+		for x := 0; x < gridWidth; x++ {
+			ps := g[y][x].placedShip
+			if ps != nil {
+				if ps.health > 0 {
+					return false
+				}
 			}
 		}
 	}
-	return false
+	return true
 }
 
 func main() {
-	s := cannedGameState()
-	fmt.Println("Player one:")
-	printBoard(s, player1)
-	fmt.Println("Player two:")
-	printBoard(s, player2)
+	cannedShots(cannedGrids())
 }

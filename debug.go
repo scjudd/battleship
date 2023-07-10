@@ -2,78 +2,127 @@ package main
 
 import "fmt"
 
-func printBoard(s *gameState, p player) {
-	for y := 0; y < 10; y++ {
-	nextPos:
-		for x := 0; x < 10; x++ {
-			for _, ship := range s.ships[int(p)] {
-				for _, o := range ship.occupies {
-					if o.x == x && o.y == y {
-						fmt.Print(shipCharacter(ship.name) + " ")
-						continue nextPos
-					}
+func printGrid(g *Grid) {
+	for y := 0; y < gridHeight; y++ {
+		for x := 0; x < gridHeight; x++ {
+			c := g[y][x]
+
+			if c.shot {
+				if c.placedShip == nil {
+					fmt.Print("\x1b[1;5;36m") // miss
+				} else if c.placedShip.health > 0 {
+					fmt.Print("\x1b[1;5;33m") // hit
+				} else {
+					fmt.Print("\x1b[1;5;31m") // sunk
 				}
 			}
-			fmt.Print(". ")
+
+			if c.placedShip == nil {
+				fmt.Print(". \x1b[0m")
+				continue
+			}
+
+			switch c.placedShip.ship.name {
+			case "Carrier":
+				fmt.Print("C ")
+			case "Battleship":
+				fmt.Print("B ")
+			case "Cruiser":
+				fmt.Print("R ")
+			case "Submarine":
+				fmt.Print("S ")
+			case "Destroyer":
+				fmt.Print("D ")
+			}
+
+			fmt.Print("\x1b[0m")
 		}
+
 		fmt.Println()
 	}
 }
 
-func shipCharacter(name string) string {
-	switch name {
-	case "Carrier":
-		return "C"
-	case "Battleship":
-		return "B"
-	case "Cruiser":
-		return "R"
-	case "Submarine":
-		return "S"
-	case "Destroyer":
-		return "D"
-	}
-	return ""
+type gridBuilder struct {
+	steps []gridBuilderStep
 }
 
-func cannedGameState() *gameState {
-	s := &gameState{}
+type gridBuilderStep struct {
+	s *Ship
+	p Position
+	o Orientation
+}
 
+func (b *gridBuilder) Reset() {
+	b.steps = b.steps[:0]
+}
+
+func (b *gridBuilder) Place(s *Ship, p Position, o Orientation) {
+	step := gridBuilderStep{s, p, o}
+	b.steps = append(b.steps, step)
+}
+
+func (b *gridBuilder) Build() (*Grid, error) {
+	var g Grid
+
+	for _, step := range b.steps {
+		if err := g.PlaceShip(step.s, step.p, step.o); err != nil {
+			return &g, err
+		}
+	}
+
+	return &g, nil
+}
+
+func cannedGrids() (*Grid, *Grid) {
 	// player one
 
-	if err := placeCarrier(s, player1, position{2, 2}, vertical); err != nil {
-		panic(err)
-	}
-	if err := placeBattleship(s, player1, position{3, 2}, horizontal); err != nil {
-		panic(err)
-	}
-	if err := placeCruiser(s, player1, position{4, 4}, horizontal); err != nil {
-		panic(err)
-	}
-	if err := placeSubmarine(s, player1, position{0, 1}, vertical); err != nil {
-		panic(err)
-	}
-	if err := placeDestroyer(s, player1, position{8, 7}, vertical); err != nil {
+	var b gridBuilder
+
+	b.Place(ShipCarrier, Position{2, 2}, Vertical)
+	b.Place(ShipBattleship, Position{3, 2}, Horizontal)
+	b.Place(ShipCruiser, Position{4, 4}, Horizontal)
+	b.Place(ShipSubmarine, Position{0, 1}, Vertical)
+	b.Place(ShipDestroyer, Position{8, 7}, Vertical)
+
+	g1, err := b.Build()
+	if err != nil {
 		panic(err)
 	}
 
 	// player two
 
-	if err := placeCarrier(s, player2, position{0, 0}, horizontal); err != nil {
-		panic(err)
-	}
-	if err := placeBattleship(s, player2, position{2, 3}, vertical); err != nil {
-		panic(err)
-	}
-	if err := placeCruiser(s, player2, position{2, 2}, horizontal); err != nil {
-		panic(err)
-	}
-	if err := placeSubmarine(s, player2, position{5, 5}, vertical); err != nil {
-		panic(err)
-	}
-	if err := placeDestroyer(s, player2, position{3, 9}, horizontal); err != nil {
+	b.Reset()
+
+	b.Place(ShipCarrier, Position{0, 0}, Horizontal)
+	b.Place(ShipBattleship, Position{2, 3}, Vertical)
+	b.Place(ShipCruiser, Position{2, 2}, Horizontal)
+	b.Place(ShipSubmarine, Position{5, 5}, Vertical)
+	b.Place(ShipDestroyer, Position{3, 9}, Horizontal)
+
+	g2, err := b.Build()
+	if err != nil {
 		panic(err)
 	}
 
-	return s
+	return g1, g2
+}
+
+func cannedShots(g1, g2 *Grid) {
+	g2.Fire(Position{0, 0}) // hit
+	g2.Fire(Position{1, 0}) // hit
+	g2.Fire(Position{2, 0}) // hit
+	g2.Fire(Position{3, 0}) // hit
+	g2.Fire(Position{4, 0}) // sunk
+
+	g2.Fire(Position{0, 1}) // miss
+
+	g2.Fire(Position{2, 2}) // hit
+
+	fmt.Println("Player 1 grid")
+	printGrid(g1)
+
+	fmt.Println()
+
+	fmt.Println("Player 2 grid")
+	printGrid(g2)
 }
