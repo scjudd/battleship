@@ -6,6 +6,8 @@ import (
 	"math/rand"
 )
 
+const totalShips = 5
+
 var (
 	ShipCarrier    = &Ship{name: "Carrier", length: 5}
 	ShipBattleship = &Ship{name: "Battleship", length: 4}
@@ -26,87 +28,72 @@ var (
 	ErrOverlapping       = errors.New("ship cannot be placed on top of an existing ship")
 )
 
-func NewGame() *GameSetup {
-	return &GameSetup{}
+type Game struct {
+	phase      gamePhase
+	playerTurn Player
+	grids      [2]Grid
 }
 
-type GameSetup [2]playerSetup
+type gamePhase int
 
-func (setup *GameSetup) PlaceShip(player Player, s *Ship, p Position, o Orientation) error {
-	ps := &setup[int(player)]
+const (
+	setupPhase gamePhase = iota
+	playPhase
+	finishedPhase
+)
 
-	if ps.grid == nil {
-		ps.grid = &Grid{}
+func (game *Game) PlaceShip(player Player, s *Ship, p Position, o Orientation) error {
+	if game.phase == finishedPhase {
+		return ErrGameOver
 	}
 
-	if ps.placedShips == 5 {
+	if game.phase == playPhase {
 		return ErrAllShipsPlaced
 	}
 
-	err := ps.grid.PlaceShip(s, p, o)
-	if err != nil {
-		return err
+	grid := &game.grids[int(player)]
+	if grid.remainingShips == totalShips {
+		return ErrAllShipsPlaced
 	}
 
-	ps.placedShips += 1
-	return nil
+	return grid.PlaceShip(s, p, o)
 }
 
-func (setup *GameSetup) StartGame() (*RunningGame, error) {
-	for i := range setup {
-		if setup[i].placedShips != 5 {
-			return nil, ErrNotAllShipsPlaced
-		}
-	}
-
-	return &RunningGame{
-		finished: false,
-		turn:     PlayerOne,
-		grids: [2]*Grid{
-			setup[0].grid,
-			setup[1].grid,
-		},
-	}, nil
-}
-
-type playerSetup struct {
-	grid        *Grid
-	placedShips int
-}
-
-type RunningGame struct {
-	finished bool
-	turn     Player
-	grids    [2]*Grid
-}
-
-func (game *RunningGame) Fire(player Player, p Position) (ShotResult, error) {
-	if game.finished {
+func (game *Game) Fire(player Player, p Position) (ShotResult, error) {
+	if game.phase == finishedPhase {
 		return NotFired, ErrGameOver
 	}
 
-	if game.turn != player {
+	if game.phase == setupPhase {
+		if game.grids[0].remainingShips < totalShips ||
+			game.grids[1].remainingShips < totalShips {
+			return NotFired, ErrNotAllShipsPlaced
+		}
+		game.phase = playPhase
+	}
+
+	if game.playerTurn != player {
 		return NotFired, ErrOutOfTurn
 	}
 
-	g := game.grids[int(otherPlayer(player))]
-	result, err := g.Fire(p)
+	grid := &game.grids[int(otherPlayer(player))]
+	result, err := grid.Fire(p)
 	if err != nil {
 		return result, err
 	}
 
 	if result != Won {
-		game.turn = otherPlayer(player)
+		game.playerTurn = otherPlayer(player)
 	}
 
 	return result, nil
 }
 
-func (game *RunningGame) Winner() (Player, error) {
-	if !game.finished {
-		return game.turn, ErrGameNotOver
+func (game *Game) Winner() (Player, error) {
+	if game.phase != finishedPhase {
+		return game.playerTurn, ErrGameNotOver
 	}
-	return game.turn, nil
+	return game.playerTurn, nil
 }
 
 type Player int
@@ -140,7 +127,7 @@ func (g *Grid) CheckPlacement(s *Ship, p Position, o Orientation) error {
 		return ErrInvalidPosition
 	}
 
-	if g.remainingShips == 5 {
+	if g.remainingShips == totalShips {
 		return ErrAllShipsPlaced
 	}
 
@@ -201,10 +188,11 @@ func (g *Grid) Fire(p Position) (ShotResult, error) {
 		c.placedShip.health -= 1
 	}
 
+	if err == nil && c.placedShip.health == 0 {
+		g.remainingShips -= 1
+	}
+
 	if c.placedShip.health == 0 {
-		if err == nil {
-			g.remainingShips -= 1
-		}
 		if g.remainingShips == 0 {
 			return Won, err
 		}
@@ -287,27 +275,17 @@ func (cg *cannedGame) Fire(player Player, p Position) {
 }
 
 func (cg *cannedGame) Play() {
-	setup := NewGame()
-	var game *RunningGame
+	game := &Game{}
 	var err error
 
 	for _, i := range cg.steps {
 		switch v := i.(type) {
 		case cannedGamePlacement:
-			if game != nil {
-				panic("game already started")
-			}
-			err = setup.PlaceShip(v.player, v.s, v.p, v.o)
+			err = game.PlaceShip(v.player, v.s, v.p, v.o)
 			if err != nil {
 				panic(err)
 			}
 		case cannedGameShot:
-			if game == nil {
-				game, err = setup.StartGame()
-				if err != nil {
-					panic(err)
-				}
-			}
 			_, err = game.Fire(v.player, v.p)
 			if err != nil {
 				panic(err)
@@ -316,47 +294,30 @@ func (cg *cannedGame) Play() {
 	}
 
 	fmt.Println("PlayerOne grid")
-	printGrid(game.grids[int(PlayerOne)])
+	printGrid(&game.grids[int(PlayerOne)])
 
 	fmt.Println()
 
 	fmt.Println("PlayerTwo grid")
-	printGrid(game.grids[int(PlayerTwo)])
+	printGrid(&game.grids[int(PlayerTwo)])
 }
 
 func (cg *cannedGame) PlayRandom() {
-	setup := NewGame()
-	var game *RunningGame
+	game := &Game{}
 	var err error
 
 	for _, i := range cg.steps {
 		switch v := i.(type) {
 		case cannedGamePlacement:
-			if game != nil {
-				panic("game already started")
-			}
-			err = setup.PlaceShip(v.player, v.s, v.p, v.o)
+			err = game.PlaceShip(v.player, v.s, v.p, v.o)
 			if err != nil {
 				panic(err)
 			}
 		case cannedGameShot:
-			if game == nil {
-				game, err = setup.StartGame()
-				if err != nil {
-					panic(err)
-				}
-			}
 			_, err = game.Fire(v.player, v.p)
 			if err != nil {
 				panic(err)
 			}
-		}
-	}
-
-	if game == nil {
-		game, err = setup.StartGame()
-		if err != nil {
-			panic(err)
 		}
 	}
 
@@ -373,12 +334,12 @@ func (cg *cannedGame) PlayRandom() {
 	}
 
 	fmt.Println("PlayerOne grid")
-	printGrid(game.grids[int(PlayerOne)])
+	printGrid(&game.grids[int(PlayerOne)])
 
 	fmt.Println()
 
 	fmt.Println("PlayerTwo grid")
-	printGrid(game.grids[int(PlayerTwo)])
+	printGrid(&game.grids[int(PlayerTwo)])
 }
 
 func printGrid(g *Grid) {
