@@ -201,7 +201,9 @@ func (g *Grid) Fire(p Position) (ShotResult, error) {
 	}
 
 	if c.placedShip.health == 0 {
-		g.remainingShips -= 1
+		if err == nil {
+			g.remainingShips -= 1
+		}
 		if g.remainingShips == 0 {
 			return Won, err
 		}
