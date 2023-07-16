@@ -252,34 +252,57 @@ const (
 	Won
 )
 
-func main() {
-	gameSetup := NewGame()
+type cannedGame struct {
+	steps []interface{}
+}
 
-	gameSetup.PlaceShip(PlayerOne, ShipCarrier, Position{2, 2}, Vertical)
-	gameSetup.PlaceShip(PlayerOne, ShipBattleship, Position{3, 2}, Horizontal)
-	gameSetup.PlaceShip(PlayerOne, ShipCruiser, Position{4, 4}, Horizontal)
-	gameSetup.PlaceShip(PlayerOne, ShipSubmarine, Position{0, 1}, Vertical)
-	gameSetup.PlaceShip(PlayerOne, ShipDestroyer, Position{8, 7}, Vertical)
+type cannedGamePlacement struct {
+	player Player
+	s      *Ship
+	p      Position
+	o      Orientation
+}
 
-	gameSetup.PlaceShip(PlayerTwo, ShipCarrier, Position{0, 0}, Horizontal)
-	gameSetup.PlaceShip(PlayerTwo, ShipBattleship, Position{2, 3}, Vertical)
-	gameSetup.PlaceShip(PlayerTwo, ShipCruiser, Position{2, 2}, Horizontal)
-	gameSetup.PlaceShip(PlayerTwo, ShipSubmarine, Position{5, 5}, Vertical)
-	gameSetup.PlaceShip(PlayerTwo, ShipDestroyer, Position{3, 9}, Horizontal)
+type cannedGameShot struct {
+	player Player
+	p      Position
+}
 
-	game, err := gameSetup.StartGame()
-	if err != nil {
-		panic(err)
-	}
+func (cg *cannedGame) PlaceShip(player Player, s *Ship, p Position, o Orientation) {
+	cg.steps = append(cg.steps, cannedGamePlacement{player, s, p, o})
+}
 
-	_, err = game.Fire(PlayerOne, Position{0, 0})
-	if err != nil {
-		panic(err)
-	}
+func (cg *cannedGame) Fire(player Player, p Position) {
+	cg.steps = append(cg.steps, cannedGameShot{player, p})
+}
 
-	_, err = game.Fire(PlayerTwo, Position{1, 0})
-	if err != nil {
-		panic(err)
+func (cg *cannedGame) Play() {
+	setup := NewGame()
+	var game *RunningGame
+	var err error
+
+	for _, i := range cg.steps {
+		switch v := i.(type) {
+		case cannedGamePlacement:
+			if game != nil {
+				panic("game already started")
+			}
+			err = setup.PlaceShip(v.player, v.s, v.p, v.o)
+			if err != nil {
+				panic(err)
+			}
+		case cannedGameShot:
+			if game == nil {
+				game, err = setup.StartGame()
+				if err != nil {
+					panic(err)
+				}
+			}
+			_, err = game.Fire(v.player, v.p)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	fmt.Println("PlayerOne grid")
@@ -289,4 +312,65 @@ func main() {
 
 	fmt.Println("PlayerTwo grid")
 	printGrid(game.grids[int(PlayerTwo)])
+}
+
+func printGrid(g *Grid) {
+	for y := 0; y < gridHeight; y++ {
+		for x := 0; x < gridHeight; x++ {
+			c := g.cells[y][x]
+
+			if c.shot {
+				if c.placedShip == nil {
+					fmt.Print("\x1b[1;5;36m") // miss
+				} else if c.placedShip.health > 0 {
+					fmt.Print("\x1b[1;5;33m") // hit
+				} else {
+					fmt.Print("\x1b[1;5;31m") // sunk
+				}
+			}
+
+			if c.placedShip == nil {
+				fmt.Print(". \x1b[0m")
+				continue
+			}
+
+			switch c.placedShip.ship.name {
+			case "Carrier":
+				fmt.Print("C ")
+			case "Battleship":
+				fmt.Print("B ")
+			case "Cruiser":
+				fmt.Print("R ")
+			case "Submarine":
+				fmt.Print("S ")
+			case "Destroyer":
+				fmt.Print("D ")
+			}
+
+			fmt.Print("\x1b[0m")
+		}
+
+		fmt.Println()
+	}
+}
+
+func main() {
+	cg := &cannedGame{}
+
+	cg.PlaceShip(PlayerOne, ShipCarrier, Position{2, 2}, Vertical)
+	cg.PlaceShip(PlayerOne, ShipBattleship, Position{3, 2}, Horizontal)
+	cg.PlaceShip(PlayerOne, ShipCruiser, Position{4, 4}, Horizontal)
+	cg.PlaceShip(PlayerOne, ShipSubmarine, Position{0, 1}, Vertical)
+	cg.PlaceShip(PlayerOne, ShipDestroyer, Position{8, 7}, Vertical)
+
+	cg.PlaceShip(PlayerTwo, ShipCarrier, Position{0, 0}, Horizontal)
+	cg.PlaceShip(PlayerTwo, ShipBattleship, Position{2, 3}, Vertical)
+	cg.PlaceShip(PlayerTwo, ShipCruiser, Position{2, 2}, Horizontal)
+	cg.PlaceShip(PlayerTwo, ShipSubmarine, Position{5, 5}, Vertical)
+	cg.PlaceShip(PlayerTwo, ShipDestroyer, Position{3, 9}, Horizontal)
+
+	cg.Fire(PlayerOne, Position{0, 0})
+	cg.Fire(PlayerTwo, Position{1, 0})
+
+	cg.Play()
 }
