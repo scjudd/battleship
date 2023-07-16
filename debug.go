@@ -5,7 +5,7 @@ import "fmt"
 func printGrid(g *Grid) {
 	for y := 0; y < gridHeight; y++ {
 		for x := 0; x < gridHeight; x++ {
-			c := g[y][x]
+			c := g.cells[y][x]
 
 			if c.shot {
 				if c.placedShip == nil {
