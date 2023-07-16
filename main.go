@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 )
 
 var (
@@ -230,6 +231,13 @@ type Ship struct {
 
 type Position struct{ X, Y int }
 
+func randomPosition() Position {
+	return Position{
+		rand.Intn(gridWidth),
+		rand.Intn(gridHeight),
+	}
+}
+
 func (p Position) offset(n int, o Orientation) Position {
 	if o == Horizontal {
 		return Position{p.X + n, p.Y}
@@ -316,6 +324,63 @@ func (cg *cannedGame) Play() {
 	printGrid(game.grids[int(PlayerTwo)])
 }
 
+func (cg *cannedGame) PlayRandom() {
+	setup := NewGame()
+	var game *RunningGame
+	var err error
+
+	for _, i := range cg.steps {
+		switch v := i.(type) {
+		case cannedGamePlacement:
+			if game != nil {
+				panic("game already started")
+			}
+			err = setup.PlaceShip(v.player, v.s, v.p, v.o)
+			if err != nil {
+				panic(err)
+			}
+		case cannedGameShot:
+			if game == nil {
+				game, err = setup.StartGame()
+				if err != nil {
+					panic(err)
+				}
+			}
+			_, err = game.Fire(v.player, v.p)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	if game == nil {
+		game, err = setup.StartGame()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	player := PlayerTwo
+	for {
+		player = otherPlayer(player)
+		result, err := game.Fire(player, randomPosition())
+		if err != nil {
+			continue
+		}
+		if result == Won {
+			break
+		}
+	}
+
+	fmt.Println("PlayerOne grid")
+	printGrid(game.grids[int(PlayerOne)])
+
+	fmt.Println()
+
+	fmt.Println("PlayerTwo grid")
+	printGrid(game.grids[int(PlayerTwo)])
+}
+
 func printGrid(g *Grid) {
 	for y := 0; y < gridHeight; y++ {
 		for x := 0; x < gridHeight; x++ {
@@ -371,8 +436,5 @@ func main() {
 	cg.PlaceShip(PlayerTwo, ShipSubmarine, Position{5, 5}, Vertical)
 	cg.PlaceShip(PlayerTwo, ShipDestroyer, Position{3, 9}, Horizontal)
 
-	cg.Fire(PlayerOne, Position{0, 0})
-	cg.Fire(PlayerTwo, Position{1, 0})
-
-	cg.Play()
+	cg.PlayRandom()
 }
