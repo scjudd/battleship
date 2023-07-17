@@ -14,21 +14,26 @@ message NewGameRequest {
 }
 
 message NewGameResponse {
-  string id = 1;
+  string gameID = 1;
+  string playerID = 2;
 }
 
 message JoinGameRequest {
-  string id = 1;
+  string gameID = 1;
 }
 
 message JoinGameResponse {
-  string message = 1;
+  string playerID = 1;
 }
 
 message PlaceShipRequest {
-  string name = 1;
+  string gameID = 1;
+  string playerID = 2;
+  string shipName = 3;
+  int32 x = 4;
+  int32 y = 5;
+  bool vertical = 6;
 }
 
 message PlaceShipResponse {
-  string message = 1;
 }

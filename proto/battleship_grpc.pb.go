@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BattleshipClient interface {
 	NewGame(ctx context.Context, in *NewGameRequest, opts ...grpc.CallOption) (*NewGameResponse, error)
+	JoinGame(ctx context.Context, in *JoinGameRequest, opts ...grpc.CallOption) (*JoinGameResponse, error)
 	PlaceShip(ctx context.Context, in *PlaceShipRequest, opts ...grpc.CallOption) (*PlaceShipResponse, error)
 }
 
@@ -43,6 +44,15 @@ func (c *battleshipClient) NewGame(ctx context.Context, in *NewGameRequest, opts
 	return out, nil
 }
 
+func (c *battleshipClient) JoinGame(ctx context.Context, in *JoinGameRequest, opts ...grpc.CallOption) (*JoinGameResponse, error) {
+	out := new(JoinGameResponse)
+	err := c.cc.Invoke(ctx, "/battleship.Battleship/JoinGame", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *battleshipClient) PlaceShip(ctx context.Context, in *PlaceShipRequest, opts ...grpc.CallOption) (*PlaceShipResponse, error) {
 	out := new(PlaceShipResponse)
 	err := c.cc.Invoke(ctx, "/battleship.Battleship/PlaceShip", in, out, opts...)
@@ -57,6 +67,7 @@ func (c *battleshipClient) PlaceShip(ctx context.Context, in *PlaceShipRequest, 
 // for forward compatibility
 type BattleshipServer interface {
 	NewGame(context.Context, *NewGameRequest) (*NewGameResponse, error)
+	JoinGame(context.Context, *JoinGameRequest) (*JoinGameResponse, error)
 	PlaceShip(context.Context, *PlaceShipRequest) (*PlaceShipResponse, error)
 	mustEmbedUnimplementedBattleshipServer()
 }
@@ -67,6 +78,9 @@ type UnimplementedBattleshipServer struct {
 
 func (UnimplementedBattleshipServer) NewGame(context.Context, *NewGameRequest) (*NewGameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewGame not implemented")
+}
+func (UnimplementedBattleshipServer) JoinGame(context.Context, *JoinGameRequest) (*JoinGameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinGame not implemented")
 }
 func (UnimplementedBattleshipServer) PlaceShip(context.Context, *PlaceShipRequest) (*PlaceShipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PlaceShip not implemented")
@@ -102,6 +116,24 @@ func _Battleship_NewGame_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Battleship_JoinGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinGameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BattleshipServer).JoinGame(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/battleship.Battleship/JoinGame",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BattleshipServer).JoinGame(ctx, req.(*JoinGameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Battleship_PlaceShip_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PlaceShipRequest)
 	if err := dec(in); err != nil {
@@ -130,6 +162,10 @@ var Battleship_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NewGame",
 			Handler:    _Battleship_NewGame_Handler,
+		},
+		{
+			MethodName: "JoinGame",
+			Handler:    _Battleship_JoinGame_Handler,
 		},
 		{
 			MethodName: "PlaceShip",
