@@ -104,6 +104,47 @@ func (s *server) PlaceShip(ctx context.Context, in *pb.PlaceShipRequest) (*pb.Pl
 	return &pb.PlaceShipResponse{}, nil
 }
 
+func (s *server) Fire(ctx context.Context, in *pb.FireRequest) (*pb.FireResponse, error) {
+	g, ok := s.games[in.GameID]
+	if !ok {
+		return nil, errGameNotFound
+	}
+
+	if !g.Ready() {
+		return nil, errGameNotReady
+	}
+
+	var player battleship.Player
+	if in.PlayerID == g.playerOneID {
+		player = battleship.PlayerOne
+	} else if in.PlayerID == g.playerTwoID {
+		player = battleship.PlayerTwo
+	} else {
+		return nil, errInvalidPlayerID
+	}
+
+	p := battleship.Position{X: int(in.X), Y: int(in.Y)}
+
+	result, err := g.Fire(player, p)
+	if err != nil {
+		return nil, err
+	}
+
+	var resultString string
+	switch result {
+	case battleship.Missed:
+		resultString = "missed"
+	case battleship.Hit:
+		resultString = "hit"
+	case battleship.Sunk:
+		resultString = "sunk"
+	case battleship.Won:
+		resultString = "won"
+	}
+
+	return &pb.FireResponse{Result: resultString}, nil
+}
+
 type game struct {
 	battleship.Game
 	gameID      string

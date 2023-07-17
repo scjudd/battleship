@@ -8,6 +8,7 @@ service Battleship {
   rpc NewGame(NewGameRequest) returns (NewGameResponse) {}
   rpc JoinGame(JoinGameRequest) returns (JoinGameResponse) {}
   rpc PlaceShip(PlaceShipRequest) returns (PlaceShipResponse) {}
+  rpc Fire(FireRequest) returns (FireResponse) {}
 }
 
 message NewGameRequest {
@@ -36,4 +37,15 @@ message PlaceShipRequest {
 }
 
 message PlaceShipResponse {
+}
+
+message FireRequest {
+  string gameID = 1;
+  string playerID = 2;
+  int32 x = 3;
+  int32 y = 4;
+}
+
+message FireResponse {
+  string result = 1;
 }

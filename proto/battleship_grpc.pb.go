@@ -25,6 +25,7 @@ type BattleshipClient interface {
 	NewGame(ctx context.Context, in *NewGameRequest, opts ...grpc.CallOption) (*NewGameResponse, error)
 	JoinGame(ctx context.Context, in *JoinGameRequest, opts ...grpc.CallOption) (*JoinGameResponse, error)
 	PlaceShip(ctx context.Context, in *PlaceShipRequest, opts ...grpc.CallOption) (*PlaceShipResponse, error)
+	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*FireResponse, error)
 }
 
 type battleshipClient struct {
@@ -62,6 +63,15 @@ func (c *battleshipClient) PlaceShip(ctx context.Context, in *PlaceShipRequest, 
 	return out, nil
 }
 
+func (c *battleshipClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*FireResponse, error) {
+	out := new(FireResponse)
+	err := c.cc.Invoke(ctx, "/battleship.Battleship/Fire", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BattleshipServer is the server API for Battleship service.
 // All implementations must embed UnimplementedBattleshipServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type BattleshipServer interface {
 	NewGame(context.Context, *NewGameRequest) (*NewGameResponse, error)
 	JoinGame(context.Context, *JoinGameRequest) (*JoinGameResponse, error)
 	PlaceShip(context.Context, *PlaceShipRequest) (*PlaceShipResponse, error)
+	Fire(context.Context, *FireRequest) (*FireResponse, error)
 	mustEmbedUnimplementedBattleshipServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedBattleshipServer) JoinGame(context.Context, *JoinGameRequest)
 }
 func (UnimplementedBattleshipServer) PlaceShip(context.Context, *PlaceShipRequest) (*PlaceShipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PlaceShip not implemented")
+}
+func (UnimplementedBattleshipServer) Fire(context.Context, *FireRequest) (*FireResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Fire not implemented")
 }
 func (UnimplementedBattleshipServer) mustEmbedUnimplementedBattleshipServer() {}
 
@@ -152,6 +166,24 @@ func _Battleship_PlaceShip_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Battleship_Fire_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FireRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BattleshipServer).Fire(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/battleship.Battleship/Fire",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BattleshipServer).Fire(ctx, req.(*FireRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Battleship_ServiceDesc is the grpc.ServiceDesc for Battleship service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var Battleship_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PlaceShip",
 			Handler:    _Battleship_PlaceShip_Handler,
+		},
+		{
+			MethodName: "Fire",
+			Handler:    _Battleship_Fire_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
