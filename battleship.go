@@ -1,4 +1,4 @@
-package main
+package battleship
 
 import (
 	"errors"
@@ -382,20 +382,20 @@ func printGrid(g *Grid) {
 	}
 }
 
-func main() {
-	cg := &cannedGame{}
-
-	cg.PlaceShip(PlayerOne, ShipCarrier, Position{2, 2}, Vertical)
-	cg.PlaceShip(PlayerOne, ShipBattleship, Position{3, 2}, Horizontal)
-	cg.PlaceShip(PlayerOne, ShipCruiser, Position{4, 4}, Horizontal)
-	cg.PlaceShip(PlayerOne, ShipSubmarine, Position{0, 1}, Vertical)
-	cg.PlaceShip(PlayerOne, ShipDestroyer, Position{8, 7}, Vertical)
-
-	cg.PlaceShip(PlayerTwo, ShipCarrier, Position{0, 0}, Horizontal)
-	cg.PlaceShip(PlayerTwo, ShipBattleship, Position{2, 3}, Vertical)
-	cg.PlaceShip(PlayerTwo, ShipCruiser, Position{2, 2}, Horizontal)
-	cg.PlaceShip(PlayerTwo, ShipSubmarine, Position{5, 5}, Vertical)
-	cg.PlaceShip(PlayerTwo, ShipDestroyer, Position{3, 9}, Horizontal)
-
-	cg.PlayRandom()
-}
+// func main() {
+// 	cg := &cannedGame{}
+//
+// 	cg.PlaceShip(PlayerOne, ShipCarrier, Position{2, 2}, Vertical)
+// 	cg.PlaceShip(PlayerOne, ShipBattleship, Position{3, 2}, Horizontal)
+// 	cg.PlaceShip(PlayerOne, ShipCruiser, Position{4, 4}, Horizontal)
+// 	cg.PlaceShip(PlayerOne, ShipSubmarine, Position{0, 1}, Vertical)
+// 	cg.PlaceShip(PlayerOne, ShipDestroyer, Position{8, 7}, Vertical)
+//
+// 	cg.PlaceShip(PlayerTwo, ShipCarrier, Position{0, 0}, Horizontal)
+// 	cg.PlaceShip(PlayerTwo, ShipBattleship, Position{2, 3}, Vertical)
+// 	cg.PlaceShip(PlayerTwo, ShipCruiser, Position{2, 2}, Horizontal)
+// 	cg.PlaceShip(PlayerTwo, ShipSubmarine, Position{5, 5}, Vertical)
+// 	cg.PlaceShip(PlayerTwo, ShipDestroyer, Position{3, 9}, Horizontal)
+//
+// 	cg.PlayRandom()
+// }

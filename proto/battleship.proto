@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option go_package = "github.com/scjudd/battleship/proto";
+
+package battleship;
+
+service Battleship {
+  rpc NewGame(NewGameRequest) returns (NewGameResponse) {}
+  rpc JoinGame(JoinGameRequest) returns (JoinGameResponse) {}
+  rpc PlaceShip(PlaceShipRequest) returns (PlaceShipResponse) {}
+}
+
+message NewGameRequest {
+}
+
+message NewGameResponse {
+  string id = 1;
+}
+
+message JoinGameRequest {
+  string id = 1;
+}
+
+message JoinGameResponse {
+  string message = 1;
+}
+
+message PlaceShipRequest {
+  string name = 1;
+}
+
+message PlaceShipResponse {
+  string message = 1;
+}
