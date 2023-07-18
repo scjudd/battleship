@@ -1,0 +1,11 @@
+services:
+  server:
+    build: .
+    ports:
+      - 50051:50051
+  web-client:
+    build: ./clients/web
+    volumes:
+      - ./clients/web:/usr/src/battleship-client-web
+    ports:
+      - 3000:3000
