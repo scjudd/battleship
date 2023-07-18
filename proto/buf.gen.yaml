@@ -1,0 +1,16 @@
+version: v1
+plugins:
+  - plugin: buf.build/protocolbuffers/go:v1.28.1
+    out: .
+    opt: paths=source_relative
+  - plugin: buf.build/grpc/go:v1.2.0
+    out: .
+    opt: paths=source_relative
+  - plugin: buf.build/protocolbuffers/js:v3.21.2
+    opt: import_style=commonjs
+    out: ../clients/web/src/proto
+  - plugin: buf.build/grpc/web:v1.4.2
+    opt:
+      - mode=grpcwebtext
+      - import_style=commonjs
+    out: ../clients/web/src/proto
