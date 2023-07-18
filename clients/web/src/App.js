@@ -1,10 +1,12 @@
 import './App.css';
-import Grid from './Grid.js';
+import Grid from './Grid';
+import GridLoader from './GridLoader';
 
 function App() {
   return (
     <div className="App">
       <header className="App-header">
+        <GridLoader />
         <Grid />
         <a
           className="App-link"
