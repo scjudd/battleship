@@ -1,8 +1,15 @@
+version: '3'
 services:
   server:
     build: .
     ports:
       - 50051:50051
+  envoy:
+    image: envoyproxy/envoy:distroless-dev-76667dd9454101a6f9d38b672555e076706d190a
+    ports:
+      - 8080:8080
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
   web-client:
     build: ./clients/web
     volumes:
