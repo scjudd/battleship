@@ -1,7 +1,21 @@
 import "./Grid.css";
 
+import {NewGameRequest} from './proto/battleship_pb.js';
+import {BattleshipClient} from './proto/battleship_grpc_web_pb.js';
+
 function fire(x, y) {
 	console.log("Firing at (" + x + "," + y + ")!");
+
+	let client = new BattleshipClient("http://localhost:8080")
+	let request = new NewGameRequest();
+	client.newGame(request, {}, function(err, response) {
+		if (err) {
+			console.log(err);
+		} else {
+			console.log("Game ID", response.getGameid());
+			console.log("Player ID", response.getPlayerid());
+		}
+	});
 }
 
 function Grid() {
