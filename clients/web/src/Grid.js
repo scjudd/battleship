@@ -1,40 +1,65 @@
+import { useState } from 'react';
+
 import './Grid.css';
-import * as battleship from './battleship';
 
-function fire(x, y) {
-  console.log('Firing at (' + x + ',' + y + ')!');
+function Cell({ isOver, onDragOver }) {
+  const [duration] = useState(`${Math.random() + 3}s`);
+  const [delay]    = useState(`${Math.random() - 4}s`);
+
+  return (
+    <div
+      onDragOver={onDragOver}
+      className={'inline-block w-[24px] h-[24px] m-0.5 bg-gray-600 border border-gray-400 rounded-sm' + (isOver ? ' bg-red-500' : '')}
+      style={{ animation: `${duration} ease ${delay} infinite grid-wave` }}
+    />
+  );
 }
 
-async function placeShip(gameID, playerID, name, x, y, position) {
-  console.log('placing a ' + name + ' at (' + x + ',' + y + ')');
-  await battleship.placeShip(gameID, playerID, name, x, y, position);
-}
+export default function Grid({ dragging }) {
+  let [over, setOver] = useState(null);
 
-function Grid() {
-  let rows = [];
-  for (let y = 0; y < 10; y++) {
-    let row = [];
-    for (let x = 0; x < 10; x++) {
-      row.push(
-        <div
-          className="Grid-cell"
-          key={x + ',' + y}
-          onClick={() =>
-            placeShip(window.gameID, window.playerID, 'Battleship', x, y, false)
-          }
-        >
-          {x + ',' + y}
-        </div>,
-      );
+  function handleDragOver({x: overX, y: overY}) {
+    if (dragging === null) {
+      return;
     }
-    rows.push(
-      <div className="Grid-row" key={y}>
-        {row}
-      </div>,
-    );
+
+    const newOver = {
+      startX: overX - dragging.dragX,
+      startY: overY - dragging.dragY,
+      length: dragging.length,
+      vertical: dragging.vertical,
+    };
+
+    if (over === null || newOver.startX != over.startX || newOver.startY != over.startY || newOver.length != over.length || newOver.vertical != over.vertical) {
+      setOver(newOver);
+    }
   }
 
-  return <div>{rows}</div>;
-}
+  function isOver({x, y}) {
+    if (over === null) {
+      return false;
+    }
 
-export default Grid;
+    if (over.vertical === false) {
+      return y == over.startY && x >= over.startX && x < over.startX + over.length;
+    }
+
+    throw new Error("unimplemented: not currently handling vertical ships");
+    return false;
+  }
+
+  let rows = [];
+  for (let y = 0; y < 10; y++) {
+    let cells = [];
+    for (let x = 0; x < 10; x++) {
+      cells.push(<Cell key={'x-' + x} isOver={isOver({x, y})} onDragOver={() => handleDragOver({x, y})} />);
+    }
+    rows.push(<div key={'y-' + y} className="flex">{cells}</div>);
+  }
+
+  return (
+    <div className="p-2 bg-gray-900 rounded border border-gray-600">
+      {rows}
+    </div>
+  );
+}

@@ -1,21 +1,25 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+import Layout from './pages/Layout';
+import NewGame from './pages/NewGame';
+import JoinGame from './pages/JoinGame';
+import NoPage from './pages/NoPage';
+
+import GameMenu from './GameMenu';
 import Grid from './Grid';
-import GridLoader from './GridLoader';
 
 function App() {
   return (
-    <div>
-      <header>
-        <GridLoader />
-        <Grid />
-        <a
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route exact path="/" element={<Navigate to="/new" />} />
+          <Route path="/new" element={<NewGame />} />
+          <Route path="/join" element={<JoinGame />} />
+          <Route path="*" element={<NoPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
