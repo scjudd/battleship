@@ -1,47 +1,145 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const cellSize = 26;
 
+const Orientation = Object.freeze({
+  Horizontal: Symbol('horizontal'),
+  Vertical: Symbol('vertical'),
+});
+
 export default function Ship({ kind, setDragging }) {
-  let [isDragging, setIsDragging] = useState(false);
+  const [orientation, setOrientation] = useState(Orientation.Horizontal);
+  const [cursor, setCursor] = useState({ x: 0, y: 0, dragging: false });
 
-  function handleDragStart(e) {
-    // If the ship were broken into cellSize squares, compute which one our
-    // mouse would be in during a drag. When the mouse is over a grid cell
-    // during a drag event, these dimensions will inform how many cells up,
-    // right, down or left need to be handled.
-    const {offsetX, offsetY} = e.nativeEvent;
-    const [dragX, dragY] = [Math.floor(offsetX / cellSize), Math.floor(offsetY / cellSize)];
-    setDragging({length: 5, vertical: false, dragX, dragY});
-    setIsDragging(true);
+  useEffect(() => {
+    const setPositionFromEvent = (e) => {
+      if (cursor.dragging) {
+        setCursor({ x: e.clientX, y: e.clientY, dragging: true });
+      }
+    };
+
+    const stopDragging = () => {
+      setCursor({ x: cursor.x, y: cursor.y, dragging: false });
+    };
+
+    window.addEventListener('mousemove', setPositionFromEvent);
+    window.addEventListener('mouseup', stopDragging);
+
+    return () => {
+      window.removeEventListener('mousemove', setPositionFromEvent);
+      window.removeEventListener('mouseup', stopDragging);
+    };
+  }, [cursor]);
+
+  let length = null;
+  if (kind === 'Carrier') {
+    length = 5;
+  } else if (kind === 'Battleship') {
+    length = 4;
+  } else if (kind === 'Cruiser' || kind === 'Submarine') {
+    length = 3;
+  } else if (kind === 'Destroyer') {
+    length = 2;
+  } else {
+    throw new Error(`Unexpected ship kind: ${kind}`);
   }
 
-  function handleDragEnd(e) {
-    setDragging(null);
-    setIsDragging(false);
+  let dimensions = null;
+  if (length === 1) {
+    dimensions = { w: 24, h: 24 };
+  } else if (length === 2 && orientation === Orientation.Horizontal) {
+    dimensions = { w: 52, h: 24 };
+  } else if (length === 2 && orientation === Orientation.Vertical) {
+    dimensions = { w: 24, h: 52 };
+  } else if (length === 3 && orientation === Orientation.Horizontal) {
+    dimensions = { w: 80, h: 24 };
+  } else if (length === 3 && orientation === Orientation.Vertical) {
+    dimensions = { w: 24, h: 80 };
+  } else if (length === 4 && orientation === Orientation.Horizontal) {
+    dimensions = { w: 108, h: 24 };
+  } else if (length === 4 && orientation === Orientation.Vertical) {
+    dimensions = { w: 24, h: 108 };
+  } else if (length === 5 && orientation === Orientation.Horizontal) {
+    dimensions = { w: 136, h: 24 };
+  } else if (length === 5 && orientation === Orientation.Vertical) {
+    dimensions = { w: 24, h: 136 };
+  } else {
+    throw new Error(`Unexpected ship length: ${length}`);
   }
 
-  function handleDrop(e) {
-    setIsDragging(false);
-  }
-
-  const base = 'inline w-[136px] h-[24px] m-0.5 bg-sky-700 border rounded-sm cursor-grab active:cursor-grabbing';
-  const dragging = 'opacity-25 border-dotted';
-
-  function classNames() {
-    if (isDragging) {
-      return [base, dragging].join(' ');
+  // These class strings must be static in order for tailwind to find them.
+  const dimensionClasses = (length, orientation) => {
+    if (length === 1) {
+      return 'w-[24px] h-[24px]';
+    } else if (length === 2 && orientation === Orientation.Horizontal) {
+      return 'w-[52px] h-[24px]';
+    } else if (length === 2 && orientation === Orientation.Vertical) {
+      return 'w-[24px] h-[52px]';
+    } else if (length === 3 && orientation === Orientation.Horizontal) {
+      return 'w-[80px] h-[24px]';
+    } else if (length === 3 && orientation === Orientation.Vertical) {
+      return 'w-[24px] h-[80px]';
+    } else if (length === 4 && orientation === Orientation.Horizontal) {
+      return 'w-[108px] h-[24px]';
+    } else if (length === 4 && orientation === Orientation.Vertical) {
+      return 'w-[24px] h-[108px]';
+    } else if (length === 5 && orientation === Orientation.Horizontal) {
+      return 'w-[136px] h-[24px]';
+    } else if (length === 5 && orientation === Orientation.Vertical) {
+      return 'w-[24px] h-[136px]';
+    } else {
+      throw new Error(`Unexpected ship length: ${length}`);
     }
-    return base;
-  }
+  };
+
+  const baseClasses = [
+    'inline',
+    dimensionClasses(length, orientation),
+    'm-0.5',
+    'bg-sky-700',
+    'border',
+    'rounded-sm',
+    'cursor-grab',
+  ].join(' ');
+
+  const activeClasses = [baseClasses, 'cursor-grabbing'].join(' ');
+
+  const ghostClasses = [baseClasses, 'border-dotted', 'opacity-25'].join(' ');
+
+  const handleDragStart = (e) => {
+    e.preventDefault();
+  };
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    setCursor({ x: e.clientX, y: e.clientY, dragging: true });
+  };
+
+  const handleMouseUp = (e) => {
+    e.preventDefault();
+    setCursor({ x: 0, y: 0, dragging: false });
+  };
 
   return (
-    <div
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDrop={handleDrop}
-      draggable='true'
-      className={classNames()}
-    />
+    <>
+      <div
+        onDragStart={handleDragStart}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        className={cursor.dragging ? ghostClasses : baseClasses}
+      />
+      {cursor.dragging && (
+        <div
+          onDragStart={handleDragStart}
+          className={activeClasses}
+          style={{
+            position: 'absolute',
+            top: cursor.y - dimensions.h / 2,
+            left: cursor.x - dimensions.w / 2,
+          }}
+        />
+      )}
+    </>
   );
 }

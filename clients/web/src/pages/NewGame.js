@@ -9,8 +9,12 @@ export default function NewGame() {
   return (
     <div className="flex justify-center">
       <Grid dragging={dragging} />
-      <div className="flex justify-center">
+      <div className="flex flex-wrap content-start">
+        <Ship kind="Carrier" setDragging={setDragging} />
+        <Ship kind="Battleship" setDragging={setDragging} />
         <Ship kind="Cruiser" setDragging={setDragging} />
+        <Ship kind="Submarine" setDragging={setDragging} />
+        <Ship kind="Destroyer" setDragging={setDragging} />
       </div>
     </div>
   );

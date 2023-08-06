@@ -4,7 +4,7 @@ function GameMenu() {
       <li className="">New Game</li>
       <li className="">Join Game</li>
     </ul>
-  )
+  );
 }
 
-export default GameMenu
+export default GameMenu;
